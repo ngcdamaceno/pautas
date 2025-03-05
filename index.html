@@ -1,0 +1,1147 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle de Audiências - Promotoria</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .navbar-brand {
+            font-weight: bold;
+        }
+        .bg-promotoria {
+            background-color: #2c3e50;
+        }
+        .btn-promotoria {
+            background-color: #2c3e50;
+            color: white;
+        }
+        .btn-promotoria:hover {
+            background-color: #1a252f;
+            color: white;
+        }
+        .footer {
+            background-color: #f8f9fa;
+            padding: 20px 0;
+            margin-top: 30px;
+        }
+        .badge-criminal {
+            background-color: #dc3545;
+            color: white;
+        }
+        .badge-civel {
+            background-color: #0d6efd;
+            color: white;
+        }
+        .badge-preliminar {
+            background-color: #6c757d;
+            color: white;
+        }
+        .badge-conciliacao {
+            background-color: #198754;
+            color: white;
+        }
+        .badge-anpp {
+            background-color: #fd7e14;
+            color: white;
+        }
+        .badge-default {
+            background-color: #6c757d;
+            color: white;
+        }
+        .filtro-mes {
+            margin-bottom: 20px;
+        }
+        #calendar {
+            margin-top: 20px;
+        }
+        .day-cell {
+            height: 120px;
+            overflow-y: auto;
+        }
+        .day-number {
+            font-weight: bold;
+            font-size: 1.2em;
+            margin-bottom: 5px;
+        }
+        .event-item {
+            padding: 2px 5px;
+            margin-bottom: 2px;
+            border-radius: 3px;
+            font-size: 0.8em;
+            cursor: pointer;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .today {
+            background-color: #f0f8ff;
+        }
+        .outro-mes {
+            background-color: #f8f9fa;
+            color: #adb5bd;
+        }
+        #loadingMessage, #errorMessage {
+            display: none;
+            position: fixed;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 9999;
+            padding: 10px 15px;
+            border-radius: 5px;
+        }
+        #loadingMessage {
+            background-color: #cff4fc;
+            color: #055160;
+        }
+        #errorMessage {
+            background-color: #f8d7da;
+            color: #842029;
+        }
+    </style>
+</head>
+<body>
+    <!-- Mensagens de carregamento e erro -->
+    <div id="loadingMessage" class="alert alert-info"></div>
+    <div id="errorMessage" class="alert alert-danger"></div>
+
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-promotoria">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-gavel me-2"></i>Controle de Audiências
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#" id="viewCalendar">Calendário</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" id="viewList">Lista</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" id="viewForm">Nova Audiência</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" id="importExport">Importar/Exportar</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Conteúdo principal -->
+    <div class="container mt-4">
+        <!-- Seção do Calendário -->
+        <div id="calendarSection">
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <div class="d-flex align-items-center">
+                        <button id="prevMonth" class="btn btn-sm btn-outline-secondary">
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                        <h3 id="currentMonth" class="mx-3 mb-0">Março 2025</h3>
+                        <button id="nextMonth" class="btn btn-sm btn-outline-secondary">
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                        <button id="today" class="btn btn-sm btn-outline-primary ms-2">Hoje</button>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="d-flex justify-content-end gap-2">
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input filter-type" type="checkbox" value="CRIMINAL" id="filterCriminal" checked>
+                            <label class="form-check-label" for="filterCriminal">
+                                <span class="badge badge-criminal">Criminal</span>
+                            </label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input filter-type" type="checkbox" value="CIVEL" id="filterCivel" checked>
+                            <label class="form-check-label" for="filterCivel">
+                                <span class="badge badge-civel">Cível</span>
+                            </label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input filter-type" type="checkbox" value="PRELIMINAR" id="filterPreliminar" checked>
+                            <label class="form-check-label" for="filterPreliminar">
+                                <span class="badge badge-preliminar">Preliminar</span>
+                            </label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input filter-type" type="checkbox" value="CONCILIACAO" id="filterConciliacao" checked>
+                            <label class="form-check-label" for="filterConciliacao">
+                                <span class="badge badge-conciliacao">Conciliação</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="calendar" class="mt-3">
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th class="text-center">Dom</th>
+                                <th class="text-center">Seg</th>
+                                <th class="text-center">Ter</th>
+                                <th class="text-center">Qua</th>
+                                <th class="text-center">Qui</th>
+                                <th class="text-center">Sex</th>
+                                <th class="text-center">Sáb</th>
+                            </tr>
+                        </thead>
+                        <tbody id="calendarBody">
+                            <!-- O calendário será preenchido via JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Seção da Lista de Audiências -->
+        <div id="listSection" style="display: none;">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h3>Lista de Audiências</h3>
+                <div class="d-flex gap-2">
+                    <select id="filterMonth" class="form-select form-select-sm">
+                        <option value="all">Todos os meses</option>
+                        <option value="1">Janeiro</option>
+                        <option value="2">Fevereiro</option>
+                        <option value="3">Março</option>
+                        <option value="4">Abril</option>
+                        <option value="5">Maio</option>
+                        <option value="6">Junho</option>
+                        <option value="7">Julho</option>
+                        <option value="8">Agosto</option>
+                        <option value="9">Setembro</option>
+                        <option value="10">Outubro</option>
+                        <option value="11">Novembro</option>
+                        <option value="12">Dezembro</option>
+                    </select>
+                    <select id="filterYear" class="form-select form-select-sm">
+                        <option value="2025">2025</option>
+                        <option value="2026">2026</option>
+                    </select>
+                    <input type="text" id="searchAudiencia" class="form-control form-control-sm" placeholder="Buscar...">
+                </div>
+            </div>
+            
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Hora</th>
+                            <th>Processo</th>
+                            <th>Tipo</th>
+                            <th>Detalhes</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="audienciasList">
+                        <!-- Lista de audiências será preenchida via JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Formulário de Nova Audiência -->
+        <div id="formSection" style="display: none;">
+            <div class="card">
+                <div class="card-header bg-promotoria text-white">
+                    <h4 id="formTitle">Nova Audiência</h4>
+                </div>
+                <div class="card-body">
+                    <form id="audienciaForm">
+                        <input type="hidden" id="editId" value="">
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="dataAudiencia" class="form-label">Data da Audiência</label>
+                                <input type="date" class="form-control" id="dataAudiencia" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="horaAudiencia" class="form-label">Hora da Audiência</label>
+                                <input type="time" class="form-control" id="horaAudiencia" required>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="numeroProcesso" class="form-label">Número do Processo</label>
+                                <input type="text" class="form-control" id="numeroProcesso" placeholder="0000000-00.0000.0.00.0000" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="tipoAudiencia" class="form-label">Tipo de Audiência</label>
+                                <select class="form-select" id="tipoAudiencia" required>
+                                    <option value="">Selecione...</option>
+                                    <option value="AIJ CRIMINAL">AIJ Criminal</option>
+                                    <option value="TCO">TCO</option>
+                                    <option value="PRELIMINAR">Preliminar</option>
+                                    <option value="CONCILIAÇÃO">Conciliação</option>
+                                    <option value="AIJ">AIJ</option>
+                                    <option value="ANPP">ANPP</option>
+                                    <option value="ALIMENTOS">Alimentos</option>
+                                    <option value="GUARDA">Guarda</option>
+                                    <option value="ADOÇÃO">Adoção</option>
+                                    <option value="APRESENTAÇÃO">Apresentação</option>
+                                    <option value="OUTRO">Outro</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="detalhesAudiencia" class="form-label">Detalhes da Audiência</label>
+                            <textarea class="form-control" id="detalhesAudiencia" rows="3" placeholder="Partes, testemunhas, observações, link virtual, etc."></textarea>
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2">
+                            <button type="button" class="btn btn-secondary" id="cancelForm">Cancelar</button>
+                            <button type="submit" class="btn btn-promotoria">Salvar Audiência</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Seção de Importação/Exportação -->
+        <div id="importExportSection" style="display: none;">
+            <div class="card">
+                <div class="card-header bg-promotoria text-white">
+                    <h4>Importar / Exportar Dados</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <h5>Google Sheets Sync</h5>
+                            <p>Sincronize manualmente com o Google Sheets caso precise atualizar os dados.</p>
+                            <button id="syncSheetsBtn" class="btn btn-primary">
+                                <i class="fas fa-sync me-2"></i>Atualizar dados do Google Sheets
+                            </button>
+                            <div id="syncStatus" class="mt-2"></div>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5>Exportar Dados</h5>
+                            <p>Baixe todas as suas audiências em formato JSON para backup local.</p>
+                            <button id="exportBtn" class="btn btn-secondary">
+                                <i class="fas fa-download me-2"></i>Exportar Audiências
+                            </button>
+                        </div>
+                        <div class="col-md-6">
+                            <h5>Importar Dados</h5>
+                            <p>Carregue um arquivo JSON contendo audiências previamente exportadas.</p>
+                            <div class="mb-3">
+                                <input class="form-control" type="file" id="importFile" accept=".json">
+                            </div>
+                            <button id="importBtn" class="btn btn-success">
+                                <i class="fas fa-upload me-2"></i>Importar Audiências
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal de Detalhes da Audiência -->
+        <div class="modal fade" id="audienciaModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Detalhes da Audiência</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <strong>Processo:</strong>
+                            <p id="modalProcesso"></p>
+                        </div>
+                        <div class="mb-3">
+                            <strong>Data e Hora:</strong>
+                            <p id="modalDataHora"></p>
+                        </div>
+                        <div class="mb-3">
+                            <strong>Tipo:</strong>
+                            <p id="modalTipo"></p>
+                        </div>
+                        <div class="mb-3">
+                            <strong>Detalhes:</strong>
+                            <p id="modalDetalhes"></p>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                        <button type="button" class="btn btn-warning" id="editAudiencia">Editar</button>
+                        <button type="button" class="btn btn-danger" id="deleteAudiencia">Excluir</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer mt-5">
+        <div class="container text-center">
+            <p>© 2025 - Aplicativo de Controle de Audiências - Promotoria</p>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // URL da sua Web App do Google Script (substitua pelo seu URL)
+        const SHEETS_API_URL = 'https://script.google.com/macros/s/AKfycbwPW_m37BktAM1rZduL0lITTpbXfac8ECinKygli2mw0LFouFFzBSjwh0IbSaAnqL62YQ/exec';
+
+        // Função para inicializar o aplicativo
+        document.addEventListener('DOMContentLoaded', function() {
+            // Verificar se é a primeira execução
+            if (!localStorage.getItem('sheetsInitialized')) {
+                checkFirstRun();
+            }
+            
+            // Variáveis globais
+            let audiencias = [];
+            let currentAudienciaId = null;
+            const currentDate = new Date();
+            let currentViewMonth = currentDate.getMonth();
+            let currentViewYear = currentDate.getFullYear();
+            
+            // Elementos DOM
+            const calendarSection = document.getElementById('calendarSection');
+            const listSection = document.getElementById('listSection');
+            const formSection = document.getElementById('formSection');
+            const importExportSection = document.getElementById('importExportSection');
+            
+            // Botões de navegação
+            const viewCalendarBtn = document.getElementById('viewCalendar');
+            const viewListBtn = document.getElementById('viewList');
+            const viewFormBtn = document.getElementById('viewForm');
+            const importExportBtn = document.getElementById('importExport');
+            
+            // Seletores do calendário
+            const prevMonthBtn = document.getElementById('prevMonth');
+            const nextMonthBtn = document.getElementById('nextMonth');
+            const todayBtn = document.getElementById('today');
+            const currentMonthText = document.getElementById('currentMonth');
+            
+            // Elementos do formulário
+            const audienciaForm = document.getElementById('audienciaForm');
+            const formTitle = document.getElementById('formTitle');
+            const editId = document.getElementById('editId');
+            const cancelFormBtn = document.getElementById('cancelForm');
+            
+            // Elementos de importação/exportação
+            const exportBtn = document.getElementById('exportBtn');
+            const importBtn = document.getElementById('importBtn');
+            const importFile = document.getElementById('importFile');
+            const syncSheetsBtn = document.getElementById('syncSheetsBtn');
+            
+            // Modal de detalhes
+            const audienciaModal = new bootstrap.Modal(document.getElementById('audienciaModal'));
+            const editAudienciaBtn = document.getElementById('editAudiencia');
+            const deleteAudienciaBtn = document.getElementById('deleteAudiencia');
+            
+            // Filtros
+            const filterTypeCheckboxes = document.querySelectorAll('.filter-type');
+            const filterMonth = document.getElementById('filterMonth');
+            const filterYear = document.getElementById('filterYear');
+            const searchAudiencia = document.getElementById('searchAudiencia');
+            
+            // Carregar dados iniciais
+            loadAudiencias().then(data => {
+                audiencias = data;
+                updateCalendarView();
+                updateListView();
+            });
+
+            // Event Listeners - Navegação
+            viewCalendarBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                showSection(calendarSection);
+                updateCalendarView();
+                setActiveNavItem(viewCalendarBtn);
+            });
+            
+            viewListBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                showSection(listSection);
+                updateListView();
+                setActiveNavItem(viewListBtn);
+            });
+            
+            viewFormBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                formTitle.textContent = 'Nova Audiência';
+                editId.value = '';
+                audienciaForm.reset();
+                const today = new Date().toISOString().split('T')[0];
+                document.getElementById('dataAudiencia').value = today;
+                showSection(formSection);
+                setActiveNavItem(viewFormBtn);
+            });
+            
+            importExportBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                showSection(importExportSection);
+                setActiveNavItem(importExportBtn);
+            });
+
+            // Event Listeners - Calendário
+            prevMonthBtn.addEventListener('click', function() {
+                currentViewMonth--;
+                if (currentViewMonth < 0) {
+                    currentViewMonth = 11;
+                    currentViewYear--;
+                }
+                updateCalendarView();
+            });
+            
+            nextMonthBtn.addEventListener('click', function() {
+                currentViewMonth++;
+                if (currentViewMonth > 11) {
+                    currentViewMonth = 0;
+                    currentViewYear++;
+                }
+                updateCalendarView();
+            });
+            
+            todayBtn.addEventListener('click', function() {
+                currentViewMonth = currentDate.getMonth();
+                currentViewYear = currentDate.getFullYear();
+                updateCalendarView();
+            });
+
+            // Event Listeners - Formulário
+            audienciaForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const id = editId.value || null;
+                const dataAudiencia = document.getElementById('dataAudiencia').value;
+                const horaAudiencia = document.getElementById('horaAudiencia').value;
+                const numeroProcesso = document.getElementById('numeroProcesso').value;
+                const tipoAudiencia = document.getElementById('tipoAudiencia').value;
+                const detalhesAudiencia = document.getElementById('detalhesAudiencia').value;
+                
+                const audiencia = {
+                    id: id,
+                    data: dataAudiencia,
+                    hora: horaAudiencia,
+                    processo: numeroProcesso,
+                    tipo: tipoAudiencia,
+                    detalhes: detalhesAudiencia
+                };
+                
+                const success = await saveAudiencia(audiencia);
+                
+                if (success) {
+                    audienciaForm.reset();
+                    audiencias = await loadAudiencias(); // Recarregar dados
+                    
+                    showSection(calendarSection);
+                    setActiveNavItem(viewCalendarBtn);
+                    updateCalendarView();
+                    
+                    // Mostrar alerta de sucesso
+                    alert(id ? 'Audiência atualizada com sucesso!' : 'Audiência cadastrada com sucesso!');
+                }
+            });
+            
+            cancelFormBtn.addEventListener('click', function() {
+                audienciaForm.reset();
+                showSection(calendarSection);
+                setActiveNavItem(viewCalendarBtn);
+            });
+
+            // Event Listeners - Modal
+            editAudienciaBtn.addEventListener('click', function() {
+                const audiencia = audiencias.find(a => a.id === currentAudienciaId);
+                if (audiencia) {
+                    formTitle.textContent = 'Editar Audiência';
+                    editId.value = audiencia.id;
+                    document.getElementById('dataAudiencia').value = audiencia.data;
+                    document.getElementById('horaAudiencia').value = audiencia.hora;
+                    document.getElementById('numeroProcesso').value = audiencia.processo;
+                    document.getElementById('tipoAudiencia').value = audiencia.tipo;
+                    document.getElementById('detalhesAudiencia').value = audiencia.detalhes || '';
+                    
+                    audienciaModal.hide();
+                    showSection(formSection);
+                    setActiveNavItem(viewFormBtn);
+                }
+            });
+            
+            deleteAudienciaBtn.addEventListener('click', async function() {
+                if (confirm('Tem certeza que deseja excluir esta audiência?')) {
+                    const success = await deleteAudiencia(currentAudienciaId);
+                    
+                    if (success) {
+                        audiencias = await loadAudiencias(); // Recarregar dados
+                        audienciaModal.hide();
+                        updateCalendarView();
+                        updateListView();
+                    }
+                }
+            });
+
+            // Event Listeners - Filtros
+            filterTypeCheckboxes.forEach(checkbox => {
+                checkbox.addEventListener('change', updateCalendarView);
+            });
+            
+            filterMonth.addEventListener('change', updateListView);
+            filterYear.addEventListener('change', updateListView);
+            searchAudiencia.addEventListener('input', updateListView);
+
+            // Event Listeners - Importação/Exportação
+            exportBtn.addEventListener('click', exportAudiencias);
+            importBtn.addEventListener('click', importAudiencias);
+            syncSheetsBtn.addEventListener('click', syncWithGoogleSheets);
+
+            // Funções de integração com Google Sheets
+            // Carregar audiências do Google Sheets
+            async function loadAudiencias() {
+                try {
+                    // Tentar carregar do cache local primeiro
+                    const cachedData = localStorage.getItem('promotoriaAudienciasCache');
+                    if (cachedData) {
+                        showLoadingMessage("Usando dados em cache...");
+                        setTimeout(hideLoadingMessage, 1000);
+                        return JSON.parse(cachedData);
+                    }
+                    
+                    // Se não houver cache, carregar do Google Sheets
+                    showLoadingMessage("Carregando audiências do Google Sheets...");
+                    
+                    const response = await fetch(`${SHEETS_API_URL}?action=getAll`);
+                    const result = await response.json();
+                    
+                    if (result.status === 'success') {
+                        // Atualizar o cache local
+                        localStorage.setItem('promotoriaAudienciasCache', JSON.stringify(result.data));
+                        hideLoadingMessage();
+                        return result.data;
+                    } else {
+                        showErrorMessage("Erro ao carregar dados: " + result.message);
+                        return [];
+                    }
+                } catch (error) {
+                    console.error("Erro ao carregar audiências:", error);
+                    showErrorMessage("Falha na conexão com o Google Sheets. Tentando usar dados em cache...");
+                    
+                    // Tentar usar cache mesmo em caso de erro
+                    const cachedData = localStorage.getItem('promotoriaAudienciasCache');
+                    return cachedData ? JSON.parse(cachedData) : [];
+                }
+            }
+
+            // Salvar audiência no Google Sheets
+            async function saveAudiencia(audiencia) {
+                try {
+                    showLoadingMessage("Salvando audiência...");
+                    
+                    // Montar a URL com os parâmetros
+                    let url = new URL(SHEETS_API_URL);
+                    url.searchParams.append('action', audiencia.id ? 'update' : 'add');
+                    
+                    // Adicionar todos os campos da audiência como parâmetros
+                    Object.keys(audiencia).forEach(key => {
+                        url.searchParams.append(key, audiencia[key]);
+                    });
+                    
+                    const response = await fetch(url);
+                    const result = await response.json();
+                    
+                    if (result.status === 'success') {
+                        // Se for uma nova audiência, atualizar o ID retornado
+                        if (!audiencia.id && result.id) {
+                            audiencia.id = result.id;
+                        }
+                        
+                        // Atualizar o cache local
+                        let cachedData = localStorage.getItem('promotoriaAudienciasCache');
+                        let audienciasArray = cachedData ? JSON.parse(cachedData) : [];
+                        
+                        // Verificar se é uma atualização ou nova audiência
+                        if (audiencia.id) {
+                            const index = audienciasArray.findIndex(a => a.id === audiencia.id);
+                            if (index !== -1) {
+                                audienciasArray[index] = audiencia;
+                            } else {
+                                audienciasArray.push(audiencia);
+                            }
+                        } else {
+                            audienciasArray.push(audiencia);
+                        }
+                        
+                        localStorage.setItem('promotoriaAudienciasCache', JSON.stringify(audienciasArray));
+                        hideLoadingMessage();
+                        return true;
+                    } else {
+                        showErrorMessage("Erro ao salvar: " + result.message);
+                        return false;
+                    }
+                } catch (error) {
+                    console.error("Erro ao salvar audiência:", error);
+                    showErrorMessage("Falha na conexão com o Google Sheets");
+                    return false;
+                }
+            }
+
+            // Excluir audiência do Google Sheets
+            async function deleteAudiencia(id) {
+                try {
+                    showLoadingMessage("Excluindo audiência...");
+                    
+                    const response = await fetch(`${SHEETS_API_URL}?action=delete&id=${id}`);
+                    const result = await response.json();
+                    
+                    if (result.status === 'success') {
+                        // Atualizar o cache local
+                        let cachedData = localStorage.getItem('promotoriaAudienciasCache');
+                        if (cachedData) {
+                            let audienciasArray = JSON.parse(cachedData);
+                            audienciasArray = audienciasArray.filter(a => a.id !== id);
+                            localStorage.setItem('promotoriaAudienciasCache', JSON.stringify(audienciasArray));
+                        }
+                        
+                        hideLoadingMessage();
+                        return true;
+                    } else {
+                        showErrorMessage("Erro ao excluir: " + result.message);
+                        return false;
+                    }
+                } catch (error) {
+                    console.error("Erro ao excluir audiência:", error);
+                    showErrorMessage("Falha na conexão com o Google Sheets");
+                    return false;
+                }
+            }
+
+            // Sincronizar com Google Sheets
+            async function syncWithGoogleSheets() {
+                // Limpar cache local para forçar nova leitura do Google Sheets
+                localStorage.removeItem('promotoriaAudienciasCache');
+                
+                // Recarregar dados
+                showLoadingMessage("Sincronizando com Google Sheets...");
+                audiencias = await loadAudiencias();
+                updateCalendarView();
+                updateListView();
+                
+                alert('Dados sincronizados com sucesso!');
+            }
+
+            // Verificar primeira execução e inicializar dados se necessário
+            async function checkFirstRun() {
+                try {
+                    showLoadingMessage("Verificando dados no Google Sheets...");
+                    
+                    const response = await fetch(`${SHEETS_API_URL}?action=getAll`);
+                    const result = await response.json();
+                    
+                    hideLoadingMessage();
+                    localStorage.setItem('sheetsInitialized', 'true');
+                    
+                    if (result.status === 'success' && (!result.data || result.data.length === 0)) {
+                        // Se não tiver nenhum dado, avisar o usuário
+                        alert("Nenhum dado encontrado no Google Sheets. Para carregar suas audiências, use a função 'Importar'.");
+                    }
+                } catch (error) {
+                    console.error("Erro ao verificar dados iniciais:", error);
+                    hideLoadingMessage();
+                    alert("Não foi possível conectar ao Google Sheets. Verifique se a URL da API está correta.");
+                }
+            }
+
+            // Funções de importação/exportação
+            function exportAudiencias() {
+                const dataStr = JSON.stringify(audiencias, null, 2);
+                const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+                
+                const exportFileDefaultName = 'audiencias_promotoria_' + new Date().toISOString().split('T')[0] + '.json';
+                
+                const linkElement = document.createElement('a');
+                linkElement.setAttribute('href', dataUri);
+                linkElement.setAttribute('download', exportFileDefaultName);
+                linkElement.click();
+            }
+            
+            function importAudiencias() {
+                const file = importFile.files[0];
+                if (!file) {
+                    alert('Por favor, selecione um arquivo para importar.');
+                    return;
+                }
+                
+                const reader = new FileReader();
+                reader.onload = async function(e) {
+                    try {
+                        const jsonData = JSON.parse(e.target.result);
+                        
+                        if (!Array.isArray(jsonData)) {
+                            alert('Formato de arquivo inválido. Esperava-se um array de audiências.');
+                            return;
+                        }
+                        
+                        if (confirm(`Deseja importar ${jsonData.length} audiências? Isso irá substituir todas as audiências existentes no Google Sheets.`)) {
+                            showLoadingMessage("Importando audiências...");
+                            
+                            // Verificar se o arquívo JSON tem a estrutura correta
+                            if (jsonData.length > 0 && jsonData[0].processo) {
+                                // Para cada audiência no JSON, salve no Google Sheets
+                                let successCount = 0;
+                                
+                                // Vamos primeiro apagar todas as audiências existentes
+                                localStorage.removeItem('promotoriaAudienciasCache');
+                                
+                                // Agora importar as novas
+                                for (const audiencia of jsonData) {
+                                    await saveAudiencia(audiencia);
+                                    successCount++;
+                                    showLoadingMessage(`Importando audiências... ${successCount}/${jsonData.length}`);
+                                }
+                                
+                                hideLoadingMessage();
+                                audiencias = await loadAudiencias();
+                                updateCalendarView();
+                                updateListView();
+                                
+                                alert(`Importação concluída! Foram importadas ${successCount} audiências.`);
+                            } else {
+                                alert('O arquivo não contém audiências no formato esperado.');
+                                hideLoadingMessage();
+                            }
+                        }
+                    } catch (error) {
+                        console.error("Erro ao importar arquivo:", error);
+                        alert('Erro ao processar o arquivo. Verifique se é um JSON válido.');
+                    }
+                };
+                reader.readAsText(file);
+            }
+
+            // Funções de interface
+            function showSection(section) {
+                calendarSection.style.display = 'none';
+                listSection.style.display = 'none';
+                formSection.style.display = 'none';
+                importExportSection.style.display = 'none';
+                
+                section.style.display = 'block';
+            }
+            
+            function setActiveNavItem(activeItem) {
+                [viewCalendarBtn, viewListBtn, viewFormBtn, importExportBtn].forEach(item => {
+                    item.classList.remove('active');
+                });
+                activeItem.classList.add('active');
+            }
+            
+            function updateCalendarView() {
+                // Atualizar o título do mês
+                const monthNames = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 
+                                   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+                currentMonthText.textContent = `${monthNames[currentViewMonth]} ${currentViewYear}`;
+                
+                // Obter os filtros ativos
+                const activeFilters = Array.from(filterTypeCheckboxes)
+                    .filter(cb => cb.checked)
+                    .map(cb => cb.value);
+                
+                // Obter as datas do mês
+                const firstDay = new Date(currentViewYear, currentViewMonth, 1);
+                const lastDay = new Date(currentViewYear, currentViewMonth + 1, 0);
+                
+                // Obter o dia da semana que começa o mês (0 = Domingo, 6 = Sábado)
+                let startingDay = firstDay.getDay();
+                
+                // Calcular o número de semanas
+                const totalDays = lastDay.getDate();
+                const totalCells = Math.ceil((totalDays + startingDay) / 7) * 7;
+                
+                // Construir o calendário
+                let calendarHTML = '';
+                let dayCount = 1;
+                let cellDate = null;
+                
+                for (let i = 0; i < totalCells / 7; i++) {
+                    calendarHTML += '<tr>';
+                    
+                    for (let j = 0; j < 7; j++) {
+                        if (i === 0 && j < startingDay) {
+                            // Dias do mês anterior
+                            const prevMonth = currentViewMonth === 0 ? 11 : currentViewMonth - 1;
+                            const prevYear = currentViewMonth === 0 ? currentViewYear - 1 : currentViewYear;
+                            const prevMonthLastDay = new Date(prevYear, prevMonth + 1, 0).getDate();
+                            const prevMonthDay = prevMonthLastDay - (startingDay - j - 1);
+                            
+                            cellDate = new Date(prevYear, prevMonth, prevMonthDay);
+                            calendarHTML += `<td class="day-cell outro-mes">
+                                <div class="day-number">${prevMonthDay}</div>
+                                ${getEventsForDate(cellDate, activeFilters)}
+                            </td>`;
+                        } else if (dayCount > totalDays) {
+                            // Dias do próximo mês
+                            const nextMonth = currentViewMonth === 11 ? 0 : currentViewMonth + 1;
+                            const nextYear = currentViewMonth === 11 ? currentViewYear + 1 : currentViewYear;
+                            const nextMonthDay = dayCount - totalDays;
+                            
+                            cellDate = new Date(nextYear, nextMonth, nextMonthDay);
+                            calendarHTML += `<td class="day-cell outro-mes">
+                                <div class="day-number">${nextMonthDay}</div>
+                                ${getEventsForDate(cellDate, activeFilters)}
+                            </td>`;
+                            dayCount++;
+                        } else {
+                            // Dias do mês atual
+                            cellDate = new Date(currentViewYear, currentViewMonth, dayCount);
+                            const isToday = isSameDay(cellDate, new Date());
+                            
+                            calendarHTML += `<td class="day-cell ${isToday ? 'today' : ''}">
+                                <div class="day-number">${dayCount}</div>
+                                ${getEventsForDate(cellDate, activeFilters)}
+                            </td>`;
+                            dayCount++;
+                        }
+                    }
+                    
+                    calendarHTML += '</tr>';
+                }
+                
+                document.getElementById('calendarBody').innerHTML = calendarHTML;
+                
+                // Adicionar event listeners para os eventos do calendário
+                document.querySelectorAll('.event-item').forEach(item => {
+                    item.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        const audienciaId = this.getAttribute('data-id');
+                        showAudienciaDetails(audienciaId);
+                    });
+                });
+            }
+            
+            function getEventsForDate(date, activeFilters) {
+                const dateString = date.toISOString().split('T')[0]; // Formato YYYY-MM-DD
+                
+                // Filtrar audiências para a data e tipos ativos
+                const events = audiencias.filter(a => {
+                    const tipoContem = (tipo, filtro) => tipo.toUpperCase().includes(filtro);
+                    
+                    // Verificar se o tipo corresponde a algum dos filtros ativos
+                    const matchesTipo = activeFilters.some(filter => {
+                        switch(filter) {
+                            case 'CRIMINAL': return tipoContem(a.tipo, 'CRIMINAL');
+                            case 'CIVEL': return tipoContem(a.tipo, 'CIVEL') || tipoContem(a.tipo, 'CÍVEL') || tipoContem(a.tipo, 'GUARDA') || tipoContem(a.tipo, 'ALIMENTOS');
+                            case 'PRELIMINAR': return tipoContem(a.tipo, 'PRELIMINAR');
+                            case 'CONCILIACAO': return tipoContem(a.tipo, 'CONCILIAÇÃO') || tipoContem(a.tipo, 'CONCILIACAO');
+                            default: return false;
+                        }
+                    });
+                    
+                    return a.data === dateString && matchesTipo;
+                });
+                
+                if (events.length === 0) {
+                    return '';
+                }
+                
+                // Ordenar por hora
+                events.sort((a, b) => a.hora.localeCompare(b.hora));
+                
+                // Gerar HTML para os eventos
+                let html = '';
+                for (const event of events) {
+                    let backgroundColor = '';
+                    
+                    // Determinar a cor do evento
+                    if (event.tipo.toUpperCase().includes('CRIMINAL')) {
+                        backgroundColor = '#dc3545'; // vermelho
+                    } else if (event.tipo.toUpperCase().includes('PRELIMINAR')) {
+                        backgroundColor = '#6c757d'; // cinza
+                    } else if (event.tipo.toUpperCase().includes('CONCILIAÇÃO') || event.tipo.toUpperCase().includes('CONCILIACAO')) {
+                        backgroundColor = '#198754'; // verde
+                    } else if (event.tipo.toUpperCase().includes('ANPP')) {
+                        backgroundColor = '#fd7e14'; // laranja
+                    } else if (event.tipo.toUpperCase().includes('CÍVEL') || event.tipo.toUpperCase().includes('CIVEL') || event.tipo.toUpperCase().includes('GUARDA') || event.tipo.toUpperCase().includes('ALIMENTOS')) {
+                        backgroundColor = '#0d6efd'; // azul
+                    } else {
+                        backgroundColor = '#6c757d'; // cinza padrão
+                    }
+                    
+                    html += `<div class="event-item" style="background-color: ${backgroundColor};" data-id="${event.id}">
+                        ${event.hora} - ${event.processo.substring(0, 10)}...
+                    </div>`;
+                }
+                
+                return html;
+            }
+            
+            function updateListView() {
+                const selectedMonth = filterMonth.value;
+                const selectedYear = filterYear.value;
+                const searchText = searchAudiencia.value.toLowerCase();
+                
+                // Filtrar audiências
+                const filteredAudiencias = audiencias.filter(a => {
+                    // Filtrar por mês e ano
+                    const audienciaDate = new Date(a.data);
+                    const audienciaMonth = audienciaDate.getMonth() + 1;
+                    const audienciaYear = audienciaDate.getFullYear();
+                    
+                    const matchesMonth = selectedMonth === 'all' || audienciaMonth === parseInt(selectedMonth);
+                    const matchesYear = audienciaYear === parseInt(selectedYear);
+                    
+                    // Filtrar por texto
+                    const matchesSearch = searchText === '' || 
+                        a.processo.toLowerCase().includes(searchText) || 
+                        a.tipo.toLowerCase().includes(searchText) || 
+                        (a.detalhes && a.detalhes.toLowerCase().includes(searchText));
+                    
+                    return matchesMonth && matchesYear && matchesSearch;
+                });
+                
+                // Ordenar por data e hora
+                filteredAudiencias.sort((a, b) => {
+                    if (a.data !== b.data) {
+                        return a.data.localeCompare(b.data);
+                    }
+                    return a.hora.localeCompare(b.hora);
+                });
+                
+                // Gerar HTML para a lista
+                let html = '';
+                for (const audiencia of filteredAudiencias) {
+                    const dateParts = audiencia.data.split('-');
+                    const formattedDate = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
+                    
+                    html += `
+                        <tr data-id="${audiencia.id}">
+                            <td>${formattedDate}</td>
+                            <td>${audiencia.hora}</td>
+                            <td>${audiencia.processo}</td>
+                            <td>${audiencia.tipo}</td>
+                            <td>${audiencia.detalhes || ''}</td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-info view-btn" data-id="${audiencia.id}">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-warning edit-btn" data-id="${audiencia.id}">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger delete-btn" data-id="${audiencia.id}">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                }
+                
+                document.getElementById('audienciasList').innerHTML = html || '<tr><td colspan="6" class="text-center">Nenhuma audiência encontrada</td></tr>';
+                
+                // Adicionar event listeners para os botões
+                document.querySelectorAll('.view-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const audienciaId = this.getAttribute('data-id');
+                        showAudienciaDetails(audienciaId);
+                    });
+                });
+                
+                document.querySelectorAll('.edit-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const audienciaId = this.getAttribute('data-id');
+                        const audiencia = audiencias.find(a => a.id === audienciaId);
+                        
+                        if (audiencia) {
+                            formTitle.textContent = 'Editar Audiência';
+                            editId.value = audiencia.id;
+                            document.getElementById('dataAudiencia').value = audiencia.data;
+                            document.getElementById('horaAudiencia').value = audiencia.hora;
+                            document.getElementById('numeroProcesso').value = audiencia.processo;
+                            document.getElementById('tipoAudiencia').value = audiencia.tipo;
+                            document.getElementById('detalhesAudiencia').value = audiencia.detalhes || '';
+                            
+                            showSection(formSection);
+                            setActiveNavItem(viewFormBtn);
+                        }
+                    });
+                });
+                
+                document.querySelectorAll('.delete-btn').forEach(btn => {
+                    btn.addEventListener('click', async function() {
+                        const audienciaId = this.getAttribute('data-id');
+                        
+                        if (confirm('Tem certeza que deseja excluir esta audiência?')) {
+                            const success = await deleteAudiencia(audienciaId);
+                            
+                            if (success) {
+                                audiencias = await loadAudiencias();
+                                updateListView();
+                                updateCalendarView();
+                            }
+                        }
+                    });
+                });
+            }
+            
+            function showAudienciaDetails(audienciaId) {
+                const audiencia = audiencias.find(a => a.id === audienciaId);
+                
+                if (audiencia) {
+                    // Formatar data
+                    const dateParts = audiencia.data.split('-');
+                    const formattedDate = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
+                    
+                    // Preencher o modal
+                    document.getElementById('modalProcesso').textContent = audiencia.processo;
+                    document.getElementById('modalDataHora').textContent = `${formattedDate} às ${audiencia.hora}`;
+                    document.getElementById('modalTipo').textContent = audiencia.tipo;
+                    document.getElementById('modalDetalhes').textContent = audiencia.detalhes || '(Sem detalhes)';
+                    
+                    // Salvar o ID da audiência atual
+                    currentAudienciaId = audienciaId;
+                    
+                    // Mostrar o modal
+                    audienciaModal.show();
+                }
+            }
+            
+            // Funções utilitárias
+            function isSameDay(date1, date2) {
+                return date1.getDate() === date2.getDate() &&
+                       date1.getMonth() === date2.getMonth() &&
+                       date1.getFullYear() === date2.getFullYear();
+            }
+            
+            function showLoadingMessage(message) {
+                const loadingEl = document.getElementById('loadingMessage');
+                loadingEl.textContent = message;
+                loadingEl.style.display = 'block';
+            }
+            
+            function hideLoadingMessage() {
+                const loadingEl = document.getElementById('loadingMessage');
+                loadingEl.style.display = 'none';
+            }
+            
+            function showErrorMessage(message) {
+                const errorEl = document.getElementById('errorMessage');
+                errorEl.textContent = message;
+                errorEl.style.display = 'block';
+                
+                // Ocultar após 5 segundos
+                setTimeout(() => {
+                    errorEl.style.display = 'none';
+                }, 5000);
+            }
+        });
+    </script>
+</body>
+</html>

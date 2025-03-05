@@ -397,8 +397,8 @@
     <!-- Scripts -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
     <script>
-        // URL da sua Web App do Google Script (substitua pelo seu URL)
-        const SHEETS_API_URL = 'https://script.google.com/macros/s/AKfycbwPW_m37BktAM1rZduL0lITTpbXfac8ECinKygli2mw0LFouFFzBSjwh0IbSaAnqL62YQ/exec';
+        // URL da sua Web App do Google Script
+        const SHEETS_API_URL = 'https://script.google.com/macros/s/AKfycby_MDIbOMOle5Q6CLvkPEgTClyOLrtqo5FvM8yAIFKMiaGWPMNSKHb9-kMQPJuDSSQTCg/exec';
 
         // Função para inicializar o aplicativo
         document.addEventListener('DOMContentLoaded', function() {
@@ -717,431 +717,431 @@
                     } else {
                         showErrorMessage("Erro ao excluir: " + result.message);
                         return false;
-                    }
-                } catch (error) {
-                    console.error("Erro ao excluir audiência:", error);
-                    showErrorMessage("Falha na conexão com o Google Sheets");
-                    return false;
-                }
-            }
+                   }
+               } catch (error) {
+                   console.error("Erro ao excluir audiência:", error);
+                   showErrorMessage("Falha na conexão com o Google Sheets");
+                   return false;
+               }
+           }
 
-            // Sincronizar com Google Sheets
-            async function syncWithGoogleSheets() {
-                // Limpar cache local para forçar nova leitura do Google Sheets
-                localStorage.removeItem('promotoriaAudienciasCache');
-                
-                // Recarregar dados
-                showLoadingMessage("Sincronizando com Google Sheets...");
-                audiencias = await loadAudiencias();
-                updateCalendarView();
-                updateListView();
-                
-                alert('Dados sincronizados com sucesso!');
-            }
+           // Sincronizar com Google Sheets
+           async function syncWithGoogleSheets() {
+               // Limpar cache local para forçar nova leitura do Google Sheets
+               localStorage.removeItem('promotoriaAudienciasCache');
+               
+               // Recarregar dados
+               showLoadingMessage("Sincronizando com Google Sheets...");
+               audiencias = await loadAudiencias();
+               updateCalendarView();
+               updateListView();
+               
+               alert('Dados sincronizados com sucesso!');
+           }
 
-            // Verificar primeira execução e inicializar dados se necessário
-            async function checkFirstRun() {
-                try {
-                    showLoadingMessage("Verificando dados no Google Sheets...");
-                    
-                    const response = await fetch(`${SHEETS_API_URL}?action=getAll`);
-                    const result = await response.json();
-                    
-                    hideLoadingMessage();
-                    localStorage.setItem('sheetsInitialized', 'true');
-                    
-                    if (result.status === 'success' && (!result.data || result.data.length === 0)) {
-                        // Se não tiver nenhum dado, avisar o usuário
-                        alert("Nenhum dado encontrado no Google Sheets. Para carregar suas audiências, use a função 'Importar'.");
-                    }
-                } catch (error) {
-                    console.error("Erro ao verificar dados iniciais:", error);
-                    hideLoadingMessage();
-                    alert("Não foi possível conectar ao Google Sheets. Verifique se a URL da API está correta.");
-                }
-            }
+           // Verificar primeira execução e inicializar dados se necessário
+           async function checkFirstRun() {
+               try {
+                   showLoadingMessage("Verificando dados no Google Sheets...");
+                   
+                   const response = await fetch(`${SHEETS_API_URL}?action=getAll`);
+                   const result = await response.json();
+                   
+                   hideLoadingMessage();
+                   localStorage.setItem('sheetsInitialized', 'true');
+                   
+                   if (result.status === 'success' && (!result.data || result.data.length === 0)) {
+                       // Se não tiver nenhum dado, avisar o usuário
+                       alert("Nenhum dado encontrado no Google Sheets. Para carregar suas audiências, use a função 'Importar'.");
+                   }
+               } catch (error) {
+                   console.error("Erro ao verificar dados iniciais:", error);
+                   hideLoadingMessage();
+                   alert("Não foi possível conectar ao Google Sheets. Verifique se a URL da API está correta.");
+               }
+           }
 
-            // Funções de importação/exportação
-            function exportAudiencias() {
-                const dataStr = JSON.stringify(audiencias, null, 2);
-                const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-                
-                const exportFileDefaultName = 'audiencias_promotoria_' + new Date().toISOString().split('T')[0] + '.json';
-                
-                const linkElement = document.createElement('a');
-                linkElement.setAttribute('href', dataUri);
-                linkElement.setAttribute('download', exportFileDefaultName);
-                linkElement.click();
-            }
-            
-            function importAudiencias() {
-                const file = importFile.files[0];
-                if (!file) {
-                    alert('Por favor, selecione um arquivo para importar.');
-                    return;
-                }
-                
-                const reader = new FileReader();
-                reader.onload = async function(e) {
-                    try {
-                        const jsonData = JSON.parse(e.target.result);
-                        
-                        if (!Array.isArray(jsonData)) {
-                            alert('Formato de arquivo inválido. Esperava-se um array de audiências.');
-                            return;
-                        }
-                        
-                        if (confirm(`Deseja importar ${jsonData.length} audiências? Isso irá substituir todas as audiências existentes no Google Sheets.`)) {
-                            showLoadingMessage("Importando audiências...");
-                            
-                            // Verificar se o arquívo JSON tem a estrutura correta
-                            if (jsonData.length > 0 && jsonData[0].processo) {
-                                // Para cada audiência no JSON, salve no Google Sheets
-                                let successCount = 0;
-                                
-                                // Vamos primeiro apagar todas as audiências existentes
-                                localStorage.removeItem('promotoriaAudienciasCache');
-                                
-                                // Agora importar as novas
-                                for (const audiencia of jsonData) {
-                                    await saveAudiencia(audiencia);
-                                    successCount++;
-                                    showLoadingMessage(`Importando audiências... ${successCount}/${jsonData.length}`);
-                                }
-                                
-                                hideLoadingMessage();
-                                audiencias = await loadAudiencias();
-                                updateCalendarView();
-                                updateListView();
-                                
-                                alert(`Importação concluída! Foram importadas ${successCount} audiências.`);
-                            } else {
-                                alert('O arquivo não contém audiências no formato esperado.');
-                                hideLoadingMessage();
-                            }
-                        }
-                    } catch (error) {
-                        console.error("Erro ao importar arquivo:", error);
-                        alert('Erro ao processar o arquivo. Verifique se é um JSON válido.');
-                    }
-                };
-                reader.readAsText(file);
-            }
+           // Funções de importação/exportação
+           function exportAudiencias() {
+               const dataStr = JSON.stringify(audiencias, null, 2);
+               const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+               
+               const exportFileDefaultName = 'audiencias_promotoria_' + new Date().toISOString().split('T')[0] + '.json';
+               
+               const linkElement = document.createElement('a');
+               linkElement.setAttribute('href', dataUri);
+               linkElement.setAttribute('download', exportFileDefaultName);
+               linkElement.click();
+           }
+           
+           function importAudiencias() {
+               const file = importFile.files[0];
+               if (!file) {
+                   alert('Por favor, selecione um arquivo para importar.');
+                   return;
+               }
+               
+               const reader = new FileReader();
+               reader.onload = async function(e) {
+                   try {
+                       const jsonData = JSON.parse(e.target.result);
+                       
+                       if (!Array.isArray(jsonData)) {
+                           alert('Formato de arquivo inválido. Esperava-se um array de audiências.');
+                           return;
+                       }
+                       
+                       if (confirm(`Deseja importar ${jsonData.length} audiências? Isso irá substituir todas as audiências existentes no Google Sheets.`)) {
+                           showLoadingMessage("Importando audiências...");
+                           
+                           // Verificar se o arquívo JSON tem a estrutura correta
+                           if (jsonData.length > 0 && jsonData[0].processo) {
+                               // Para cada audiência no JSON, salve no Google Sheets
+                               let successCount = 0;
+                               
+                               // Vamos primeiro apagar todas as audiências existentes
+                               localStorage.removeItem('promotoriaAudienciasCache');
+                               
+                               // Agora importar as novas
+                               for (const audiencia of jsonData) {
+                                   await saveAudiencia(audiencia);
+                                   successCount++;
+                                   showLoadingMessage(`Importando audiências... ${successCount}/${jsonData.length}`);
+                               }
+                               
+                               hideLoadingMessage();
+                               audiencias = await loadAudiencias();
+                               updateCalendarView();
+                               updateListView();
+                               
+                               alert(`Importação concluída! Foram importadas ${successCount} audiências.`);
+                           } else {
+                               alert('O arquivo não contém audiências no formato esperado.');
+                               hideLoadingMessage();
+                           }
+                       }
+                   } catch (error) {
+                       console.error("Erro ao importar arquivo:", error);
+                       alert('Erro ao processar o arquivo. Verifique se é um JSON válido.');
+                   }
+               };
+               reader.readAsText(file);
+           }
 
-            // Funções de interface
-            function showSection(section) {
-                calendarSection.style.display = 'none';
-                listSection.style.display = 'none';
-                formSection.style.display = 'none';
-                importExportSection.style.display = 'none';
-                
-                section.style.display = 'block';
-            }
-            
-            function setActiveNavItem(activeItem) {
-                [viewCalendarBtn, viewListBtn, viewFormBtn, importExportBtn].forEach(item => {
-                    item.classList.remove('active');
-                });
-                activeItem.classList.add('active');
-            }
-            
-            function updateCalendarView() {
-                // Atualizar o título do mês
-                const monthNames = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 
-                                   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
-                currentMonthText.textContent = `${monthNames[currentViewMonth]} ${currentViewYear}`;
-                
-                // Obter os filtros ativos
-                const activeFilters = Array.from(filterTypeCheckboxes)
-                    .filter(cb => cb.checked)
-                    .map(cb => cb.value);
-                
-                // Obter as datas do mês
-                const firstDay = new Date(currentViewYear, currentViewMonth, 1);
-                const lastDay = new Date(currentViewYear, currentViewMonth + 1, 0);
-                
-                // Obter o dia da semana que começa o mês (0 = Domingo, 6 = Sábado)
-                let startingDay = firstDay.getDay();
-                
-                // Calcular o número de semanas
-                const totalDays = lastDay.getDate();
-                const totalCells = Math.ceil((totalDays + startingDay) / 7) * 7;
-                
-                // Construir o calendário
-                let calendarHTML = '';
-                let dayCount = 1;
-                let cellDate = null;
-                
-                for (let i = 0; i < totalCells / 7; i++) {
-                    calendarHTML += '<tr>';
-                    
-                    for (let j = 0; j < 7; j++) {
-                        if (i === 0 && j < startingDay) {
-                            // Dias do mês anterior
-                            const prevMonth = currentViewMonth === 0 ? 11 : currentViewMonth - 1;
-                            const prevYear = currentViewMonth === 0 ? currentViewYear - 1 : currentViewYear;
-                            const prevMonthLastDay = new Date(prevYear, prevMonth + 1, 0).getDate();
-                            const prevMonthDay = prevMonthLastDay - (startingDay - j - 1);
-                            
-                            cellDate = new Date(prevYear, prevMonth, prevMonthDay);
-                            calendarHTML += `<td class="day-cell outro-mes">
-                                <div class="day-number">${prevMonthDay}</div>
-                                ${getEventsForDate(cellDate, activeFilters)}
-                            </td>`;
-                        } else if (dayCount > totalDays) {
-                            // Dias do próximo mês
-                            const nextMonth = currentViewMonth === 11 ? 0 : currentViewMonth + 1;
-                            const nextYear = currentViewMonth === 11 ? currentViewYear + 1 : currentViewYear;
-                            const nextMonthDay = dayCount - totalDays;
-                            
-                            cellDate = new Date(nextYear, nextMonth, nextMonthDay);
-                            calendarHTML += `<td class="day-cell outro-mes">
-                                <div class="day-number">${nextMonthDay}</div>
-                                ${getEventsForDate(cellDate, activeFilters)}
-                            </td>`;
-                            dayCount++;
-                        } else {
-                            // Dias do mês atual
-                            cellDate = new Date(currentViewYear, currentViewMonth, dayCount);
-                            const isToday = isSameDay(cellDate, new Date());
-                            
-                            calendarHTML += `<td class="day-cell ${isToday ? 'today' : ''}">
-                                <div class="day-number">${dayCount}</div>
-                                ${getEventsForDate(cellDate, activeFilters)}
-                            </td>`;
-                            dayCount++;
-                        }
-                    }
-                    
-                    calendarHTML += '</tr>';
-                }
-                
-                document.getElementById('calendarBody').innerHTML = calendarHTML;
-                
-                // Adicionar event listeners para os eventos do calendário
-                document.querySelectorAll('.event-item').forEach(item => {
-                    item.addEventListener('click', function(e) {
-                        e.stopPropagation();
-                        const audienciaId = this.getAttribute('data-id');
-                        showAudienciaDetails(audienciaId);
-                    });
-                });
-            }
-            
-            function getEventsForDate(date, activeFilters) {
-                const dateString = date.toISOString().split('T')[0]; // Formato YYYY-MM-DD
-                
-                // Filtrar audiências para a data e tipos ativos
-                const events = audiencias.filter(a => {
-                    const tipoContem = (tipo, filtro) => tipo.toUpperCase().includes(filtro);
-                    
-                    // Verificar se o tipo corresponde a algum dos filtros ativos
-                    const matchesTipo = activeFilters.some(filter => {
-                        switch(filter) {
-                            case 'CRIMINAL': return tipoContem(a.tipo, 'CRIMINAL');
-                            case 'CIVEL': return tipoContem(a.tipo, 'CIVEL') || tipoContem(a.tipo, 'CÍVEL') || tipoContem(a.tipo, 'GUARDA') || tipoContem(a.tipo, 'ALIMENTOS');
-                            case 'PRELIMINAR': return tipoContem(a.tipo, 'PRELIMINAR');
-                            case 'CONCILIACAO': return tipoContem(a.tipo, 'CONCILIAÇÃO') || tipoContem(a.tipo, 'CONCILIACAO');
-                            default: return false;
-                        }
-                    });
-                    
-                    return a.data === dateString && matchesTipo;
-                });
-                
-                if (events.length === 0) {
-                    return '';
-                }
-                
-                // Ordenar por hora
-                events.sort((a, b) => a.hora.localeCompare(b.hora));
-                
-                // Gerar HTML para os eventos
-                let html = '';
-                for (const event of events) {
-                    let backgroundColor = '';
-                    
-                    // Determinar a cor do evento
-                    if (event.tipo.toUpperCase().includes('CRIMINAL')) {
-                        backgroundColor = '#dc3545'; // vermelho
-                    } else if (event.tipo.toUpperCase().includes('PRELIMINAR')) {
-                        backgroundColor = '#6c757d'; // cinza
-                    } else if (event.tipo.toUpperCase().includes('CONCILIAÇÃO') || event.tipo.toUpperCase().includes('CONCILIACAO')) {
-                        backgroundColor = '#198754'; // verde
-                    } else if (event.tipo.toUpperCase().includes('ANPP')) {
-                        backgroundColor = '#fd7e14'; // laranja
-                    } else if (event.tipo.toUpperCase().includes('CÍVEL') || event.tipo.toUpperCase().includes('CIVEL') || event.tipo.toUpperCase().includes('GUARDA') || event.tipo.toUpperCase().includes('ALIMENTOS')) {
-                        backgroundColor = '#0d6efd'; // azul
-                    } else {
-                        backgroundColor = '#6c757d'; // cinza padrão
-                    }
-                    
-                    html += `<div class="event-item" style="background-color: ${backgroundColor};" data-id="${event.id}">
-                        ${event.hora} - ${event.processo.substring(0, 10)}...
-                    </div>`;
-                }
-                
-                return html;
-            }
-            
-            function updateListView() {
-                const selectedMonth = filterMonth.value;
-                const selectedYear = filterYear.value;
-                const searchText = searchAudiencia.value.toLowerCase();
-                
-                // Filtrar audiências
-                const filteredAudiencias = audiencias.filter(a => {
-                    // Filtrar por mês e ano
-                    const audienciaDate = new Date(a.data);
-                    const audienciaMonth = audienciaDate.getMonth() + 1;
-                    const audienciaYear = audienciaDate.getFullYear();
-                    
-                    const matchesMonth = selectedMonth === 'all' || audienciaMonth === parseInt(selectedMonth);
-                    const matchesYear = audienciaYear === parseInt(selectedYear);
-                    
-                    // Filtrar por texto
-                    const matchesSearch = searchText === '' || 
-                        a.processo.toLowerCase().includes(searchText) || 
-                        a.tipo.toLowerCase().includes(searchText) || 
-                        (a.detalhes && a.detalhes.toLowerCase().includes(searchText));
-                    
-                    return matchesMonth && matchesYear && matchesSearch;
-                });
-                
-                // Ordenar por data e hora
-                filteredAudiencias.sort((a, b) => {
-                    if (a.data !== b.data) {
-                        return a.data.localeCompare(b.data);
-                    }
-                    return a.hora.localeCompare(b.hora);
-                });
-                
-                // Gerar HTML para a lista
-                let html = '';
-                for (const audiencia of filteredAudiencias) {
-                    const dateParts = audiencia.data.split('-');
-                    const formattedDate = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
-                    
-                    html += `
-                        <tr data-id="${audiencia.id}">
-                            <td>${formattedDate}</td>
-                            <td>${audiencia.hora}</td>
-                            <td>${audiencia.processo}</td>
-                            <td>${audiencia.tipo}</td>
-                            <td>${audiencia.detalhes || ''}</td>
-                            <td>
-                                <button class="btn btn-sm btn-outline-info view-btn" data-id="${audiencia.id}">
-                                    <i class="fas fa-eye"></i>
-                                </button>
-                                <button class="btn btn-sm btn-outline-warning edit-btn" data-id="${audiencia.id}">
-                                    <i class="fas fa-edit"></i>
-                                </button>
-                                <button class="btn btn-sm btn-outline-danger delete-btn" data-id="${audiencia.id}">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </td>
-                        </tr>
-                    `;
-                }
-                
-                document.getElementById('audienciasList').innerHTML = html || '<tr><td colspan="6" class="text-center">Nenhuma audiência encontrada</td></tr>';
-                
-                // Adicionar event listeners para os botões
-                document.querySelectorAll('.view-btn').forEach(btn => {
-                    btn.addEventListener('click', function() {
-                        const audienciaId = this.getAttribute('data-id');
-                        showAudienciaDetails(audienciaId);
-                    });
-                });
-                
-                document.querySelectorAll('.edit-btn').forEach(btn => {
-                    btn.addEventListener('click', function() {
-                        const audienciaId = this.getAttribute('data-id');
-                        const audiencia = audiencias.find(a => a.id === audienciaId);
-                        
-                        if (audiencia) {
-                            formTitle.textContent = 'Editar Audiência';
-                            editId.value = audiencia.id;
-                            document.getElementById('dataAudiencia').value = audiencia.data;
-                            document.getElementById('horaAudiencia').value = audiencia.hora;
-                            document.getElementById('numeroProcesso').value = audiencia.processo;
-                            document.getElementById('tipoAudiencia').value = audiencia.tipo;
-                            document.getElementById('detalhesAudiencia').value = audiencia.detalhes || '';
-                            
-                            showSection(formSection);
-                            setActiveNavItem(viewFormBtn);
-                        }
-                    });
-                });
-                
-                document.querySelectorAll('.delete-btn').forEach(btn => {
-                    btn.addEventListener('click', async function() {
-                        const audienciaId = this.getAttribute('data-id');
-                        
-                        if (confirm('Tem certeza que deseja excluir esta audiência?')) {
-                            const success = await deleteAudiencia(audienciaId);
-                            
-                            if (success) {
-                                audiencias = await loadAudiencias();
-                                updateListView();
-                                updateCalendarView();
-                            }
-                        }
-                    });
-                });
-            }
-            
-            function showAudienciaDetails(audienciaId) {
-                const audiencia = audiencias.find(a => a.id === audienciaId);
-                
-                if (audiencia) {
-                    // Formatar data
-                    const dateParts = audiencia.data.split('-');
-                    const formattedDate = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
-                    
-                    // Preencher o modal
-                    document.getElementById('modalProcesso').textContent = audiencia.processo;
-                    document.getElementById('modalDataHora').textContent = `${formattedDate} às ${audiencia.hora}`;
-                    document.getElementById('modalTipo').textContent = audiencia.tipo;
-                    document.getElementById('modalDetalhes').textContent = audiencia.detalhes || '(Sem detalhes)';
-                    
-                    // Salvar o ID da audiência atual
-                    currentAudienciaId = audienciaId;
-                    
-                    // Mostrar o modal
-                    audienciaModal.show();
-                }
-            }
-            
-            // Funções utilitárias
-            function isSameDay(date1, date2) {
-                return date1.getDate() === date2.getDate() &&
-                       date1.getMonth() === date2.getMonth() &&
-                       date1.getFullYear() === date2.getFullYear();
-            }
-            
-            function showLoadingMessage(message) {
-                const loadingEl = document.getElementById('loadingMessage');
-                loadingEl.textContent = message;
-                loadingEl.style.display = 'block';
-            }
-            
-            function hideLoadingMessage() {
-                const loadingEl = document.getElementById('loadingMessage');
-                loadingEl.style.display = 'none';
-            }
-            
-            function showErrorMessage(message) {
-                const errorEl = document.getElementById('errorMessage');
-                errorEl.textContent = message;
-                errorEl.style.display = 'block';
-                
-                // Ocultar após 5 segundos
-                setTimeout(() => {
-                    errorEl.style.display = 'none';
-                }, 5000);
-            }
-        });
-    </script>
+           // Funções de interface
+           function showSection(section) {
+               calendarSection.style.display = 'none';
+               listSection.style.display = 'none';
+               formSection.style.display = 'none';
+               importExportSection.style.display = 'none';
+               
+               section.style.display = 'block';
+           }
+           
+           function setActiveNavItem(activeItem) {
+               [viewCalendarBtn, viewListBtn, viewFormBtn, importExportBtn].forEach(item => {
+                   item.classList.remove('active');
+               });
+               activeItem.classList.add('active');
+           }
+           
+           function updateCalendarView() {
+               // Atualizar o título do mês
+               const monthNames = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 
+                                  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+               currentMonthText.textContent = `${monthNames[currentViewMonth]} ${currentViewYear}`;
+               
+               // Obter os filtros ativos
+               const activeFilters = Array.from(filterTypeCheckboxes)
+                   .filter(cb => cb.checked)
+                   .map(cb => cb.value);
+               
+               // Obter as datas do mês
+               const firstDay = new Date(currentViewYear, currentViewMonth, 1);
+               const lastDay = new Date(currentViewYear, currentViewMonth + 1, 0);
+               
+               // Obter o dia da semana que começa o mês (0 = Domingo, 6 = Sábado)
+               let startingDay = firstDay.getDay();
+               
+               // Calcular o número de semanas
+               const totalDays = lastDay.getDate();
+               const totalCells = Math.ceil((totalDays + startingDay) / 7) * 7;
+               
+               // Construir o calendário
+               let calendarHTML = '';
+               let dayCount = 1;
+               let cellDate = null;
+               
+               for (let i = 0; i < totalCells / 7; i++) {
+                   calendarHTML += '<tr>';
+                   
+                   for (let j = 0; j < 7; j++) {
+                       if (i === 0 && j < startingDay) {
+                           // Dias do mês anterior
+                           const prevMonth = currentViewMonth === 0 ? 11 : currentViewMonth - 1;
+                           const prevYear = currentViewMonth === 0 ? currentViewYear - 1 : currentViewYear;
+                           const prevMonthLastDay = new Date(prevYear, prevMonth + 1, 0).getDate();
+                           const prevMonthDay = prevMonthLastDay - (startingDay - j - 1);
+                           
+                           cellDate = new Date(prevYear, prevMonth, prevMonthDay);
+                           calendarHTML += `<td class="day-cell outro-mes">
+                               <div class="day-number">${prevMonthDay}</div>
+                               ${getEventsForDate(cellDate, activeFilters)}
+                           </td>`;
+                       } else if (dayCount > totalDays) {
+                           // Dias do próximo mês
+                           const nextMonth = currentViewMonth === 11 ? 0 : currentViewMonth + 1;
+                           const nextYear = currentViewMonth === 11 ? currentViewYear + 1 : currentViewYear;
+                           const nextMonthDay = dayCount - totalDays;
+                           
+                           cellDate = new Date(nextYear, nextMonth, nextMonthDay);
+                           calendarHTML += `<td class="day-cell outro-mes">
+                               <div class="day-number">${nextMonthDay}</div>
+                               ${getEventsForDate(cellDate, activeFilters)}
+                           </td>`;
+                           dayCount++;
+                       } else {
+                           // Dias do mês atual
+                           cellDate = new Date(currentViewYear, currentViewMonth, dayCount);
+                           const isToday = isSameDay(cellDate, new Date());
+                           
+                           calendarHTML += `<td class="day-cell ${isToday ? 'today' : ''}">
+                               <div class="day-number">${dayCount}</div>
+                               ${getEventsForDate(cellDate, activeFilters)}
+                           </td>`;
+                           dayCount++;
+                       }
+                   }
+                   
+                   calendarHTML += '</tr>';
+               }
+               
+               document.getElementById('calendarBody').innerHTML = calendarHTML;
+               
+               // Adicionar event listeners para os eventos do calendário
+               document.querySelectorAll('.event-item').forEach(item => {
+                   item.addEventListener('click', function(e) {
+                       e.stopPropagation();
+                       const audienciaId = this.getAttribute('data-id');
+                       showAudienciaDetails(audienciaId);
+                   });
+               });
+           }
+           
+           function getEventsForDate(date, activeFilters) {
+               const dateString = date.toISOString().split('T')[0]; // Formato YYYY-MM-DD
+               
+               // Filtrar audiências para a data e tipos ativos
+               const events = audiencias.filter(a => {
+                   const tipoContem = (tipo, filtro) => tipo.toUpperCase().includes(filtro);
+                   
+                   // Verificar se o tipo corresponde a algum dos filtros ativos
+                   const matchesTipo = activeFilters.some(filter => {
+                       switch(filter) {
+                           case 'CRIMINAL': return tipoContem(a.tipo, 'CRIMINAL');
+                           case 'CIVEL': return tipoContem(a.tipo, 'CIVEL') || tipoContem(a.tipo, 'CÍVEL') || tipoContem(a.tipo, 'GUARDA') || tipoContem(a.tipo, 'ALIMENTOS');
+                           case 'PRELIMINAR': return tipoContem(a.tipo, 'PRELIMINAR');
+                           case 'CONCILIACAO': return tipoContem(a.tipo, 'CONCILIAÇÃO') || tipoContem(a.tipo, 'CONCILIACAO');
+                           default: return false;
+                       }
+                   });
+                   
+                   return a.data === dateString && matchesTipo;
+               });
+               
+               if (events.length === 0) {
+                   return '';
+               }
+               
+               // Ordenar por hora
+               events.sort((a, b) => a.hora.localeCompare(b.hora));
+               
+               // Gerar HTML para os eventos
+               let html = '';
+               for (const event of events) {
+                   let backgroundColor = '';
+                   
+                   // Determinar a cor do evento
+                   if (event.tipo.toUpperCase().includes('CRIMINAL')) {
+                       backgroundColor = '#dc3545'; // vermelho
+                   } else if (event.tipo.toUpperCase().includes('PRELIMINAR')) {
+                       backgroundColor = '#6c757d'; // cinza
+                   } else if (event.tipo.toUpperCase().includes('CONCILIAÇÃO') || event.tipo.toUpperCase().includes('CONCILIACAO')) {
+                       backgroundColor = '#198754'; // verde
+                   } else if (event.tipo.toUpperCase().includes('ANPP')) {
+                       backgroundColor = '#fd7e14'; // laranja
+                   } else if (event.tipo.toUpperCase().includes('CÍVEL') || event.tipo.toUpperCase().includes('CIVEL') || event.tipo.toUpperCase().includes('GUARDA') || event.tipo.toUpperCase().includes('ALIMENTOS')) {
+                       backgroundColor = '#0d6efd'; // azul
+                   } else {
+                       backgroundColor = '#6c757d'; // cinza padrão
+                   }
+                   
+                   html += `<div class="event-item" style="background-color: ${backgroundColor};" data-id="${event.id}">
+                       ${event.hora} - ${event.processo.substring(0, 10)}...
+                   </div>`;
+               }
+               
+               return html;
+           }
+           
+           function updateListView() {
+               const selectedMonth = filterMonth.value;
+               const selectedYear = filterYear.value;
+               const searchText = searchAudiencia.value.toLowerCase();
+               
+               // Filtrar audiências
+               const filteredAudiencias = audiencias.filter(a => {
+                   // Filtrar por mês e ano
+                   const audienciaDate = new Date(a.data);
+                   const audienciaMonth = audienciaDate.getMonth() + 1;
+                   const audienciaYear = audienciaDate.getFullYear();
+                   
+                   const matchesMonth = selectedMonth === 'all' || audienciaMonth === parseInt(selectedMonth);
+                   const matchesYear = audienciaYear === parseInt(selectedYear);
+                   
+                   // Filtrar por texto
+                   const matchesSearch = searchText === '' || 
+                       a.processo.toLowerCase().includes(searchText) || 
+                       a.tipo.toLowerCase().includes(searchText) || 
+                       (a.detalhes && a.detalhes.toLowerCase().includes(searchText));
+                   
+                   return matchesMonth && matchesYear && matchesSearch;
+               });
+               
+               // Ordenar por data e hora
+               filteredAudiencias.sort((a, b) => {
+                   if (a.data !== b.data) {
+                       return a.data.localeCompare(b.data);
+                   }
+                   return a.hora.localeCompare(b.hora);
+               });
+               
+               // Gerar HTML para a lista
+               let html = '';
+               for (const audiencia of filteredAudiencias) {
+                   const dateParts = audiencia.data.split('-');
+                   const formattedDate = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
+                   
+                   html += `
+                       <tr data-id="${audiencia.id}">
+                           <td>${formattedDate}</td>
+                           <td>${audiencia.hora}</td>
+                           <td>${audiencia.processo}</td>
+                           <td>${audiencia.tipo}</td>
+                           <td>${audiencia.detalhes || ''}</td>
+                           <td>
+                               <button class="btn btn-sm btn-outline-info view-btn" data-id="${audiencia.id}">
+                                   <i class="fas fa-eye"></i>
+                               </button>
+                               <button class="btn btn-sm btn-outline-warning edit-btn" data-id="${audiencia.id}">
+                                   <i class="fas fa-edit"></i>
+                               </button>
+                               <button class="btn btn-sm btn-outline-danger delete-btn" data-id="${audiencia.id}">
+                                   <i class="fas fa-trash"></i>
+                               </button>
+                           </td>
+                       </tr>
+                   `;
+               }
+               
+               document.getElementById('audienciasList').innerHTML = html || '<tr><td colspan="6" class="text-center">Nenhuma audiência encontrada</td></tr>';
+               
+               // Adicionar event listeners para os botões
+               document.querySelectorAll('.view-btn').forEach(btn => {
+                   btn.addEventListener('click', function() {
+                       const audienciaId = this.getAttribute('data-id');
+                       showAudienciaDetails(audienciaId);
+                   });
+               });
+               
+               document.querySelectorAll('.edit-btn').forEach(btn => {
+                   btn.addEventListener('click', function() {
+                       const audienciaId = this.getAttribute('data-id');
+                       const audiencia = audiencias.find(a => a.id === audienciaId);
+                       
+                       if (audiencia) {
+                           formTitle.textContent = 'Editar Audiência';
+                           editId.value = audiencia.id;
+                           document.getElementById('dataAudiencia').value = audiencia.data;
+                           document.getElementById('horaAudiencia').value = audiencia.hora;
+                           document.getElementById('numeroProcesso').value = audiencia.processo;
+                           document.getElementById('tipoAudiencia').value = audiencia.tipo;
+                           document.getElementById('detalhesAudiencia').value = audiencia.detalhes || '';
+                           
+                           showSection(formSection);
+                           setActiveNavItem(viewFormBtn);
+                       }
+                   });
+               });
+               
+               document.querySelectorAll('.delete-btn').forEach(btn => {
+                   btn.addEventListener('click', async function() {
+                       const audienciaId = this.getAttribute('data-id');
+                       
+                       if (confirm('Tem certeza que deseja excluir esta audiência?')) {
+                           const success = await deleteAudiencia(audienciaId);
+                           
+                           if (success) {
+                               audiencias = await loadAudiencias();
+                               updateListView();
+                               updateCalendarView();
+                           }
+                       }
+                   });
+               });
+           }
+           
+           function showAudienciaDetails(audienciaId) {
+               const audiencia = audiencias.find(a => a.id === audienciaId);
+               
+               if (audiencia) {
+                   // Formatar data
+                   const dateParts = audiencia.data.split('-');
+                   const formattedDate = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
+                   
+                   // Preencher o modal
+                   document.getElementById('modalProcesso').textContent = audiencia.processo;
+                   document.getElementById('modalDataHora').textContent = `${formattedDate} às ${audiencia.hora}`;
+                   document.getElementById('modalTipo').textContent = audiencia.tipo;
+                   document.getElementById('modalDetalhes').textContent = audiencia.detalhes || '(Sem detalhes)';
+                   
+                   // Salvar o ID da audiência atual
+                   currentAudienciaId = audienciaId;
+                   
+                   // Mostrar o modal
+                   audienciaModal.show();
+               }
+           }
+           
+           // Funções utilitárias
+           function isSameDay(date1, date2) {
+               return date1.getDate() === date2.getDate() &&
+                      date1.getMonth() === date2.getMonth() &&
+                      date1.getFullYear() === date2.getFullYear();
+           }
+           
+           function showLoadingMessage(message) {
+               const loadingEl = document.getElementById('loadingMessage');
+               loadingEl.textContent = message;
+               loadingEl.style.display = 'block';
+           }
+           
+           function hideLoadingMessage() {
+               const loadingEl = document.getElementById('loadingMessage');
+               loadingEl.style.display = 'none';
+           }
+           
+           function showErrorMessage(message) {
+               const errorEl = document.getElementById('errorMessage');
+               errorEl.textContent = message;
+               errorEl.style.display = 'block';
+               
+               // Ocultar após 5 segundos
+               setTimeout(() => {
+                   errorEl.style.display = 'none';
+               }, 5000);
+           }
+       });
+   </script>
 </body>
 </html>
